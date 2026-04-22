@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartQueue — Teller Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <style>
+        :root {
+            --navy:    #0B1A2E;
+            --navy2:   #112240;
+            --navy3:   #0d1e38;
+            --gold:    #C9A84C;
+            --gold2:   #E8C97A;
+            --white:   #FFFFFF;
+            --muted:   #8B96A8;
+            --success: #2ECC71;
+            --warning: #F39C12;
+            --danger:  #E74C3C;
+            --info:    #3498DB;
+            --border:  rgba(201,168,76,0.2);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--navy);
+            min-height: 100vh;
+            color: var(--white);
+        }
+
+        body::before {
+            content: ''; position: fixed; inset: 0;
+            background-image:
+                linear-gradient(rgba(201,168,76,0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(201,168,76,0.025) 1px, transparent 1px);
+            background-size: 48px 48px;
+            pointer-events: none; z-index: 0;
+        }
+
+        /* ============================
+           TOP NAV
+        ============================ */
+        .topnav {
+            position: sticky; top: 0; z-index: 100;
+            background: rgba(11,26,46,0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 32px;
+            height: 64px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+
+        .logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 20px; color: var(--white);
+            display: flex; align-items: center; gap: 10px;
+        }
+        .logo span { color: var(--gold); }
+
+        .nav-right { display: flex; align-items: center; gap: 16px; }
+        .nav-stat { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+        .nav-stat strong { color: var(--white); }
+
+        .live-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--success);
+            animation: pulse 1.8s ease infinite;
+        }
+
+        @keyframes pulse {
+            0%,100% { opacity:1; box-shadow: 0 0 0 0 rgba(46,204,113,0.4); }
+            50%      { opacity:0.6; box-shadow: 0 0 0 5px rgba(46,204,113,0); }
+        }
+
+        /* ============================
+           HEALTH BAR
+        ============================ */
+        .health-bar {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            padding: 0 32px;
+            margin-top: 20px;
+            position: relative; z-index: 1;
+        }
+        .health-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .health-val { font-size: 20px; font-weight: 700; color: var(--gold2); }
+        .health-lab { font-size: 11px; color: var(--muted); text-transform: uppercase; margin-top: 4px; }
+
+        /* ============================
+           MAIN LAYOUT
+        ============================ */
+        .main {
+            padding: 24px 32px 48px;
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            gap: 24px;
+            position: relative; z-index: 1;
+        }
+
+        .panel { background: var(--navy2); border: 1px solid rgba(255,255,255,0.07); border-radius: 18px; overflow: hidden; }
+        .panel-header { padding: 18px 22px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: space-between; }
+        .panel-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.2px; color: var(--gold); display: flex; align-items: center; gap: 8px; }
+        .panel-count { background: rgba(201,168,76,0.15); color: var(--gold); border-radius: 20px; padding: 3px 10px; font-size: 12px; font-weight: 700; }
+        .panel-body { padding: 20px 22px; }
+
+        /* Form Elements */
+        .form-row { margin-bottom: 16px; }
+        .form-label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; display: block; }
+        
+        .btn-action {
+            width: 100%; padding: 14px; border-radius: 12px; font-size: 14px; font-weight: 700;
+            cursor: pointer; border: none; transition: all 0.18s; display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-take { background: linear-gradient(135deg, var(--gold), var(--gold2)); color: var(--navy); }
+        .btn-done { background: rgba(46,204,113,0.15); border: 1px solid rgba(46,204,113,0.35); color: var(--success); }
+        
+        .btn-delay { 
+            background: rgba(243, 156, 18, 0.15); 
+            border: 1px solid rgba(243, 156, 18, 0.35); 
+            color: var(--warning); 
+            margin-top: 10px;
+        }
+
+        .btn-action:hover { opacity: 0.88; transform: translateY(-1px); }
+        .btn-disabled { background: rgba(255,255,255,0.05); color: var(--muted); cursor: not-allowed; border: 1px solid rgba(255,255,255,0.1); }
+
+        /* Statuses & Chips */
+        .serving-card { background: linear-gradient(135deg, rgba(13,30,56,0.9), rgba(17,34,64,0.9)); border: 1px solid rgba(46,204,113,0.25); border-radius: 14px; padding: 20px; }
+        .serving-ticket-num { font-family: 'Playfair Display', serif; font-size: 36px; font-weight: 700; color: var(--gold2); }
+        
+        .ticket-item { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; transition: all 0.2s; }
+        .ticket-item:hover { background: rgba(255,255,255,0.05); }
+        
+        /* Visual indicator for delayed tickets in list */
+        .ticket-item.delayed-priority { border-left: 4px solid var(--warning); background: rgba(243, 156, 18, 0.05); }
+        
+        .t-num { font-weight: 700; color: var(--gold2); font-size: 16px; display: flex; align-items: center; gap: 8px;}
+        
+        /* Utility */
+        .empty-queue { text-align: center; padding: 24px 0; color: rgba(139,150,168,0.4); font-size: 13px; }
+        .alert { padding: 12px 18px; border-radius: 10px; font-size: 14px; margin: 10px 32px 0; }
+        .alert-info { background: rgba(52,152,219,0.1); color: #a8d5f5; border: 1px solid rgba(52,152,219,0.2); }
+        .alert-warning { background: rgba(243,156,18,0.1); color: #f8c471; border: 1px solid rgba(243,156,18,0.2); }
+
+        @media (max-width: 900px) {
+            .main { grid-template-columns: 1fr; }
+            .health-bar { grid-template-columns: 1fr 1fr; }
+        }
+
+    select {
+        width: 100% !important;
+        height: 45px !important;
+        background: rgba(255, 255, 255, 0.08) !important;
+        border: 1px solid var(--gold) !important;
+        border-radius: 10px !important;
+        padding: 0 15px !important;
+        font-family: inherit !important;
+        color: white !important;
+        outline: none !important;
+        cursor: pointer !important;
+        appearance: auto !important;
+        margin-bottom: 15px !important;
+        display: block !important;
+    }
+
+    option {
+        background-color: #0B1A2E;
+        color: white;
+        padding: 10px;
+    }
+
+    </style>
+</head>
+<body id="dashboard-body" 
+      hx-get="{% url 'teller_dashboard' %}" 
+      hx-trigger="every 10s" 
+      hx-select="#dashboard-content" 
+      hx-target="#dashboard-content" 
+      hx-swap="innerHTML">
+
+<nav class="topnav">
+    <div class="nav-left" style="display:flex; align-items:center; gap:20px;">
+        <div class="logo">🏦 Smart<span>Queue</span></div>
+        <div style="font-size: 11px; font-weight: 600; color: var(--gold); background: rgba(201,168,76,0.12); border: 1px solid var(--border); padding: 4px 10px; border-radius: 4px; text-transform: uppercase;">
+            TELLER DASHBOARD — {{ request.user.username }}
+        </div>
+    </div>
+    <div class="nav-right">
+        <div class="nav-stat"><div class="live-dot"></div> Live</div>
+        <div class="nav-stat" id="clock" style="color:var(--gold);font-weight:600;"></div>
+        
+        <form action="{% url 'logout' %}" method="post" style="display: inline;">
+             {% csrf_token %}
+               <button type="submit" class="logout-btn" style="background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                 Logout
+               </button>
+        </form>
+    </div>
+</nav>
+
+<div id="dashboard-content">
+    <div class="health-bar">
+        <div class="health-card">
+            <div class="health-val">{{ total_waiting }}</div>
+            <div class="health-lab">In Queue</div>
+        </div>
+        <div class="health-card">
+            <div class="health-val">{{ avg_wait_time|default:"-- m" }}</div>
+            <div class="health-lab">Avg Wait</div>
+        </div>
+        <div class="health-card">
+            <div class="health-val" style="color:var(--success)">{{ completed_today|default:"0" }}</div>
+            <div class="health-lab">Served Today</div>
+        </div>
+        <div class="health-card">
+            <div class="health-val" style="color:var(--warning)">{{ delayed_tickets.count }}</div>
+            <div class="health-lab">Delayed</div>
+        </div>
+    </div>
+
+    {% if messages %}
+    <div style="padding: 0 32px; margin-top: 15px;">
+        {% for message in messages %}
+            <div class="alert {% if message.tags == 'warning' %}alert-warning{% else %}alert-info{% endif %}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="main">
+        <div class="left-col" style="display:flex; flex-direction:column; gap:20px;">
+            
+            <div class="panel">
+                <div class="panel-header"><div class="panel-title">⚙ Control Panel</div></div>
+                <div class="panel-body">
+                    <form method="POST">
+                        {% csrf_token %}
+                        <div class="form-row">
+                            <label class="form-label">Service Focus</label>
+                            <select name="service" required>
+                                {% for service in services %}
+                                    <option value="{{ service.id }}">{{ service.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        {% if current_ticket %}
+                            <div style="font-size:12px; color:var(--muted); text-align:center; margin-bottom:10px;">
+                                ⚠️ Finish current ticket to take next
+                            </div>
+                            <button type="button" class="btn-action btn-disabled">Next Customer</button>
+                        {% else %}
+                            <button type="submit" name="action" value="take_next" class="btn-action btn-take">▶ Take Next Customer</button>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header"><div class="panel-title">🟢 Now Serving</div></div>
+                <div class="panel-body">
+                    {% if current_ticket %}
+                        <div class="serving-card">
+                            <div class="serving-ticket-num">{{ current_ticket.ticket_number }}</div>
+                            <div style="font-size:16px; margin:4px 0;">{{ current_ticket.customer_name }}</div>
+                            <div style="font-size:12px; color:var(--muted);">{{ current_ticket.service.name }}</div>
+                        </div>
+                        
+                        <form method="POST" style="margin-top:14px;">
+                            {% csrf_token %}
+                            <input type="hidden" name="ticket_id" value="{{ current_ticket.id }}">
+                            
+                            <button type="submit" name="action" value="mark_done" class="btn-action btn-done">
+                                ✅ Mark as Done
+                            </button>
+
+                            <button type="submit" name="action" value="mark_delayed" class="btn-action btn-delay">
+                                ⏳ Customer Missing / Delay
+                            </button>
+                        </form>
+                    {% else %}
+                        <div class="empty-queue">No active customer</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:20px;">
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title">🟡 Waiting Queue</div>
+                    <div class="panel-count">{{ waiting_tickets.count }}</div>
+                </div>
+                <div class="panel-body">
+                    {% for ticket in waiting_tickets %}
+                        <div class="ticket-item {% if ticket.priority == 'delayed' or ticket.status == 'delayed' %}delayed-priority{% endif %}">
+                            <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+                                <div>
+                                    <div class="t-num">
+                                        {{ ticket.ticket_number }}
+                                        {% if ticket.priority == 'high' %}
+                                            <span style="background: rgba(231, 76, 60, 0.2); color: #E74C3C; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: bold;">HIGH</span>
+                                        {% elif ticket.priority == 'delayed' or ticket.status == 'delayed' %}
+                                            <span style="background: rgba(243, 156, 18, 0.2); color: #F39C12; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: bold;">DELAYED</span>
+                                        {% else %}
+                                            <span style="background: rgba(255, 255, 255, 0.1); color: #8B96A8; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: bold;">NORMAL</span>
+                                        {% endif %}
+                                    </div>
+                                    <div style="font-size:12px; color:var(--muted); margin-top:4px;">
+                                        👤 {{ ticket.customer_name }} &nbsp;|&nbsp; 🕒 Issued: <span style="color:var(--white);">{{ ticket.created_at|time:"H:i" }}</span>
+                                    </div>
+                                </div>
+                                <span style="font-size:10px; font-weight:bold; background:rgba(255,255,255,0.06); padding:4px 8px; border-radius:10px; border: 1px solid rgba(255,255,255,0.1);">{{ ticket.service.code }}</span>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <div class="empty-queue">Queue is empty</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title">📱 Recent SMS Activity</div>
+                </div>
+                <div class="panel-body" style="max-height: 250px; overflow-y: auto;">
+                    {% for ticket in sms_log|slice:":5" %}
+                        <div style="background:rgba(0,0,0,0.2); border-radius:8px; padding:10px; margin-bottom:8px; border-left: 3px solid var(--gold);">
+                            <div style="font-size:11px; color:var(--gold); font-weight:700;">{{ ticket.ticket_number }} ➔ {{ ticket.phone_number }}</div>
+                            <div style="font-size:11px; font-family:monospace; color:var(--muted); margin-top:4px;">{{ ticket.sms_log }}</div>
+                        </div>
+                    {% empty %}
+                         <div class="empty-queue">No messages sent yet</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 1. Clock Logic
+    function updateClock() {
+        const now = new Date();
+        const clock = document.getElementById('clock');
+        if(clock) clock.textContent = now.toLocaleTimeString();
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // 2. Notification Sound Logic
+    const bell = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+
+    document.body.addEventListener('htmx:afterOnLoad', function(evt) {
+        const healthValElem = document.querySelector('.health-val');
+        if (healthValElem) {
+            const newCount = parseInt(healthValElem.textContent);
+            // Play sound if queue increased
+            if (window.lastCount !== undefined && newCount > window.lastCount) {
+                bell.play().catch(e => console.log("Audio play blocked until user interacts with page."));
+            }
+            window.lastCount = newCount;
+        }
+    });
+</script>
+</body>
+</html>

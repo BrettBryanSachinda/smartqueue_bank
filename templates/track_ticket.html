@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="30">
+    <title>Live Tracking — SmartQueue</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --navy: #0B1A2E; --gold: #C9A84C; --white: #FFFFFF; --navy2: #112240; }
+        body {
+            font-family: 'DM Sans', sans-serif; background-color: var(--navy);
+            color: var(--white); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px;
+        }
+        .tracking-card {
+            background: var(--navy2); width: 100%; max-width: 400px;
+            border-radius: 20px; padding: 30px; text-align: center;
+            border: 1px solid rgba(255,255,255,0.05);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        h2 { font-family: 'Playfair Display', serif; color: var(--gold); margin-top: 0; }
+        .ticket-number {
+            font-family: 'Playfair Display', serif; font-size: 48px;
+            color: var(--white); margin: 20px 0; font-weight: 700;
+        }
+        .status-badge {
+            display: inline-block; padding: 8px 16px; border-radius: 20px;
+            font-size: 14px; font-weight: 700; text-transform: uppercase; margin-bottom: 20px;
+            background: rgba(201, 168, 76, 0.1); color: var(--gold); border: 1px solid var(--gold);
+        }
+        .metrics {
+            display: flex; justify-content: space-between;
+            background: rgba(0,0,0,0.2); padding: 20px; border-radius: 12px; margin-top: 20px;
+        }
+        .metric { text-align: center; width: 45%; }
+        .metric-label { font-size: 11px; color: #8B96A8; text-transform: uppercase; font-weight: 700; }
+        .metric-value { font-size: 24px; font-weight: 700; color: var(--white); margin-top: 5px; }
+        .footer-note { font-size: 12px; color: #8B96A8; margin-top: 25px; }
+        .pulse { animation: pulse 2s infinite; }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="tracking-card">
+        <h2>Live Progress</h2>
+        
+        <div class="status-badge pulse">
+            {{ ticket.get_status_display }}
+        </div>
+
+        <div class="metric-label">Your Ticket</div>
+        <div class="ticket-number">{{ ticket.ticket_number }}</div>
+
+        <div class="metrics">
+            <div class="metric">
+                <div class="metric-label">People Ahead</div>
+                <div class="metric-value">{{ people_ahead }}</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Est. Wait</div>
+                <div class="metric-value">~{{ est_wait }}m</div>
+            </div>
+        </div>
+
+        <div class="footer-note">
+            This page updates automatically.<br>Please stay nearby.
+        </div>
+    </div>
+
+</body>
+</html>
