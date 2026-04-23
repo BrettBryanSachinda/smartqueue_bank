@@ -79,6 +79,12 @@
         input::placeholder { color: rgba(255,255,255,0.25); }
         input:focus, select:focus { border-color: var(--gold); background: rgba(201,168,76,0.06); box-shadow: 0 0 0 3px rgba(201,168,76,0.12); }
 
+        /* --- THE FIX: Styles the dropdown options to match the dark theme --- */
+        select option {
+            background-color: var(--navy2);
+            color: var(--white);
+        }
+
         /* Custom Phone Input Group */
         .phone-group { display: flex; gap: 10px; }
         .phone-group select { width: 120px; }
