@@ -49,6 +49,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    
+    # --- CUSTOM SYSTEM MIDDLEWARE ---
+    'queueing.middleware.DailyCleanupMiddleware',
 ]
 
 ROOT_URLCONF = 'smartqueue_bank.urls'
@@ -121,6 +124,6 @@ STATIC_URL = 'static/'
 # Authentication Settings
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard_routing'                   # Where to go after successful login
-LOGOUT_REDIRECT_URL = 'login'                             # Where to go after logout
+LOGOUT_REDIRECT_URL = 'login'                              # Where to go after logout
 
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
