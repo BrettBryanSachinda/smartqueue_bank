@@ -186,7 +186,8 @@
       hx-trigger="every 10s" 
       hx-select="#dashboard-content" 
       hx-target="#dashboard-content" 
-      hx-swap="innerHTML">
+      hx-swap="innerHTML"
+      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
 
 <nav class="topnav">
     <div class="nav-left" style="display:flex; align-items:center; gap:20px;">
@@ -242,7 +243,7 @@
             <div class="panel">
                 <div class="panel-header"><div class="panel-title">⚙ Control Panel</div></div>
                 <div class="panel-body">
-                    <form method="POST">
+                    <form hx-post="{% url 'teller_dashboard' %}" hx-target="#dashboard-content" hx-swap="innerHTML">
                         {% csrf_token %}
                         <div class="form-row">
                             <label class="form-label">Service Focus</label>
@@ -275,7 +276,7 @@
                             <div style="font-size:12px; color:var(--muted);">{{ current_ticket.service.name }}</div>
                         </div>
                         
-                        <form method="POST" style="margin-top:14px;">
+                        <form hx-post="{% url 'teller_dashboard' %}" hx-target="#dashboard-content" hx-swap="innerHTML" style="margin-top:14px;">
                             {% csrf_token %}
                             <input type="hidden" name="ticket_id" value="{{ current_ticket.id }}">
                             
@@ -302,14 +303,15 @@
                 </div>
                 <div class="panel-body">
                     {% for ticket in waiting_tickets %}
-                        <div class="ticket-item {% if ticket.priority == 'delayed' or ticket.status == 'delayed' %}delayed-priority{% endif %}">
+                        <div class="ticket-item {% if ticket.priority == 3 or ticket.status == 'delayed' %}delayed-priority{% endif %}">
                             <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
                                 <div>
                                     <div class="t-num">
                                         {{ ticket.ticket_number }}
-                                        {% if ticket.priority == 'high' %}
+                                        
+                                        {% if ticket.priority == 1 %}
                                             <span style="background: rgba(231, 76, 60, 0.2); color: #E74C3C; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: bold;">HIGH</span>
-                                        {% elif ticket.priority == 'delayed' or ticket.status == 'delayed' %}
+                                        {% elif ticket.priority == 3 or ticket.status == 'delayed' %}
                                             <span style="background: rgba(243, 156, 18, 0.2); color: #F39C12; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: bold;">DELAYED</span>
                                         {% else %}
                                             <span style="background: rgba(255, 255, 255, 0.1); color: #8B96A8; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: bold;">NORMAL</span>

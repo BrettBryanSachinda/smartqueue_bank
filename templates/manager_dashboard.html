@@ -178,12 +178,14 @@
                 <input type="hidden" name="action" value="reassign">
                 
                 <label>Select Ticket</label>
-                <select name="ticket_id" required>
-                    <option value="" disabled selected>-- Choose a waiting ticket --</option>
-                    {% for ticket in waiting_tickets %}
-                        <option value="{{ ticket.id }}">{{ ticket.ticket_number }} ({{ ticket.customer_name }})</option>
-                    {% endfor %}
-                </select>
+<select name="ticket_id" required>
+    <option value="" disabled selected>-- Select a ticket --</option>
+    {% for ticket in waiting_tickets %}
+        <option value="{{ ticket.id }}">
+            {{ ticket.ticket_number }} ({{ ticket.customer_name }}) - [{{ ticket.get_priority_display }}]
+        </option>
+    {% endfor %}
+</select>
 
                 <label>Target Teller</label>
                 <select name="teller_id" required>
@@ -210,16 +212,15 @@
                         </option>
                     {% endfor %}
                 </select>
-
-                <label>Change Priority</label>
-                <select name="priority">
-                    <option value="normal">Normal</option>
-                    <option value="high">High</option>
-                    <option value="delayed">Delayed</option>
-                </select>
-                <button name="action" value="priority" class="btn-primary">Update Priority</button>
-
-                <hr class="divider">
+<label>Change Priority</label>
+<select name="priority">
+    <option value="1">High</option>
+    <option value="2">Normal</option>
+    <option value="3">Delayed</option>
+</select>
+<button name="action" value="priority" class="btn-primary">Update Priority</button>
+                
+<hr class="divider">
 
                 <label>Move to Service Queue</label>
                 <select name="service_id">

@@ -22,8 +22,20 @@ class Teller(models.Model):
         return f"{self.name} (Counter {self.counter_number})"
 
 class Ticket(models.Model):
-    STATUS_CHOICES = [('waiting', 'Waiting'), ('serving', 'Serving'), ('done', 'Done'), ('delayed', 'Delayed')]
-    PRIORITY_CHOICES = [('normal', 'Normal'), ('high', 'High-Priority'), ('delayed', 'Delayed')]
+    STATUS_CHOICES = [
+        ('waiting', 'Waiting'), 
+        ('serving', 'Serving'), 
+        ('done', 'Done'), 
+        ('delayed', 'Delayed')
+    ]
+    
+    # FIX: Changed to Integers for flawless mathematical sorting
+    # 1 is highest priority, 3 is lowest.
+    PRIORITY_CHOICES = [
+        (1, 'High-Priority'), 
+        (2, 'Normal'), 
+        (3, 'Delayed')
+    ]
 
     ticket_number = models.CharField(max_length=15)
     customer_name = models.CharField(max_length=100)
@@ -38,11 +50,11 @@ class Ticket(models.Model):
     # Current active teller
     teller = models.ForeignKey(Teller, on_delete=models.SET_NULL, null=True, blank=True)
     
-    # NEW: Permanent Audit Trail - Who actually finished this ticket?
+    # Permanent Audit Trail - Who actually finished this ticket?
     served_by = models.ForeignKey(Teller, on_delete=models.SET_NULL, null=True, blank=True, related_name='completed_tickets')
     
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='waiting')
-    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='normal')
+    priority = models.IntegerField(choices=PRIORITY_CHOICES, default=2)
     
     # Precision Time Tracking
     created_at = models.DateTimeField(auto_now_add=True)
@@ -55,9 +67,11 @@ class Ticket(models.Model):
     sms_log = models.TextField(null=True, blank=True)
 
     class Meta:
-        ordering = ['-priority', 'created_at']
+        # Sorts by Priority (1 first, then 2, then 3), then by oldest time
+        ordering = ['priority', 'created_at']
         indexes = [
-            models.Index(fields=['status', 'service']),
+            # UPGRADE: Comprehensive index for Lightning-fast "Take Next" queries
+            models.Index(fields=['status', 'service', 'priority', 'created_at']),
         ]
 
     def __str__(self): 

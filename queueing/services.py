@@ -4,7 +4,7 @@ from django.db.models import Count
 
 # --- SMS CONFIGURATION ---
 AT_USERNAME = "sandbox"
-AT_API_KEY = "YOUR_KEY_HERE"
+AT_API_KEY = "atsk_83b6469038d20170ff9bc765e08bf93d7d2e78664895862c9bdf3f58e9f6e39b1e0a84ad" # Make sure this is your SANDBOX key, not the live one!
 
 try:
     africastalking.initialize(AT_USERNAME, AT_API_KEY)
@@ -43,7 +43,7 @@ def send_sms_notification(ticket, message):
     print(f"SIMULATED SMS: {message}")
     return True
 
-# ✅ FIXED + UPGRADED ANALYTICS
+# ✅ FIXED + UPGRADED ANALYTICS (No Negative Times)
 def get_queue_analytics():
     from .models import Ticket
     today = timezone.now().date()
@@ -53,13 +53,15 @@ def get_queue_analytics():
     durations = []
     for t in completed:
         if t.called_at and t.completed_at:
-            diff = (t.completed_at - t.called_at).total_seconds() / 60
+            # FIX: Prevent negative durations using max(0, calculation)
+            diff = max(0, (t.completed_at - t.called_at).total_seconds() / 60)
             durations.append(diff)
     avg_service_time = sum(durations) / len(durations) if durations else 0
 
     # --- AVG WAIT TIME ---
     waiting = Ticket.objects.filter(status='waiting')
-    wait_times = [(timezone.now() - t.created_at).total_seconds() / 60 for t in waiting]
+    # FIX: Prevent negative wait times
+    wait_times = [max(0, (timezone.now() - t.created_at).total_seconds() / 60) for t in waiting]
     avg_wait = sum(wait_times) / len(wait_times) if wait_times else 0
 
     # ✅ SERVICE DOMINANCE (For Manager Charts)
