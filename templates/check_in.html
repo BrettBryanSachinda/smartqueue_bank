@@ -79,13 +79,11 @@
         input::placeholder { color: rgba(255,255,255,0.25); }
         input:focus, select:focus { border-color: var(--gold); background: rgba(201,168,76,0.06); box-shadow: 0 0 0 3px rgba(201,168,76,0.12); }
 
-        /* --- THE FIX: Styles the dropdown options to match the dark theme --- */
         select option {
             background-color: var(--navy2);
             color: var(--white);
         }
 
-        /* Custom Phone Input Group */
         .phone-group { display: flex; gap: 10px; }
         .phone-group select { width: 120px; }
         .phone-group input { flex: 1; }
@@ -163,7 +161,7 @@
                         <option value="+44">🇬🇧 +44</option>
                         <option value="+1">🇺🇸 +1</option>
                     </select>
-                    <input type="tel" id="phone_number" name="phone_number" placeholder="77 123 4567" required>
+                    <input type="tel" id="phone_number" name="phone_number" placeholder="771234567" pattern="[0-9]+" inputmode="numeric" required>
                 </div>
             </div>
 
@@ -202,19 +200,23 @@
             const countrySelect = document.getElementById('country_code');
 
             phoneInput.addEventListener('input', function(e) {
-                // If ZW is selected, automatically strip a leading '0' as the user types
-                if (countrySelect.value === '+263') {
-                    let val = e.target.value.replace(/\D/g, ''); // Remove non-digits for checking
-                    if (val.startsWith('0')) {
-                        e.target.value = val.substring(1);
-                    }
+                // FIX 2: Instantly strip out any non-digit character the user types
+                let cleanedValue = e.target.value.replace(/\D/g, ''); 
+                
+                // If ZW is selected, automatically strip a leading '0'
+                if (countrySelect.value === '+263' && cleanedValue.startsWith('0')) {
+                    cleanedValue = cleanedValue.substring(1);
                 }
+
+                // Update the input field with only the clean numbers
+                e.target.value = cleanedValue;
             });
 
             // Re-evaluate if they change the country dropdown
             countrySelect.addEventListener('change', function() {
-                if (this.value === '+263' && phoneInput.value.trim().startsWith('0')) {
-                    phoneInput.value = phoneInput.value.trim().substring(1);
+                let cleanedValue = phoneInput.value.replace(/\D/g, '');
+                if (this.value === '+263' && cleanedValue.startsWith('0')) {
+                    phoneInput.value = cleanedValue.substring(1);
                 }
             });
         });

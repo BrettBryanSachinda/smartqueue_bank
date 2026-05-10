@@ -3,8 +3,8 @@ from django.utils import timezone
 from django.db.models import Count
 
 # --- SMS CONFIGURATION ---
-AT_USERNAME = "sandbox"
-AT_API_KEY = "atsk_83b6469038d20170ff9bc765e08bf93d7d2e78664895862c9bdf3f58e9f6e39b1e0a84ad" # Make sure this is your SANDBOX key, not the live one!
+AT_USERNAME = "sandbox" # 
+AT_API_KEY = "atsk_039000b0f45033dc70a60a1291541c5dca014fc3d7e4e69074534a7df1c1f32637d687ac" 
 
 try:
     africastalking.initialize(AT_USERNAME, AT_API_KEY)
@@ -13,15 +13,26 @@ except Exception as e:
     print(f"SMS Gateway failed to initialize: {e}")
     sms = None
 
-# ✅ SMART PHONE NORMALIZER (ZIMBABWE / INT)
+# ✅ SMART PHONE NORMALIZER (Fixed for None types)
 def normalize_phone(raw_phone, country_code="+263"):
+    # Fallback if None is passed
+    if not raw_phone:
+        return None
+    if not country_code:
+        country_code = "+263"
+        
     phone = str(raw_phone).strip().replace(" ", "")
+    
     if phone.startswith("+"):
         return phone
     if phone.startswith("0"):
         return country_code + phone[1:]
-    if phone.startswith(country_code.replace("+", "")):
+    
+    # Safely strip the '+' from country code for comparison
+    clean_cc = country_code.replace("+", "")
+    if phone.startswith(clean_cc):
         return "+" + phone
+        
     return country_code + phone
 
 def send_sms_notification(ticket, message):
@@ -29,18 +40,26 @@ def send_sms_notification(ticket, message):
     ticket.sms_log = message
     ticket.called_at = timezone.now()
     ticket.save()
+    
     phone = normalize_phone(ticket.raw_phone, ticket.country_code)
 
-    print(f"--- SMS TO {phone} ---")
+    if not phone:
+        print("--- SMS FAILED: No phone number provided ---")
+        return False
+
+    print(f"--- ATTEMPTING SMS TO {phone} ---")
     if sms:
         try:
-            response = sms.send(message, [phone])
-            print(response)
+            # We explicitly define the 'sender' as None to use the default sandbox setup
+            # If you have a specific Sender ID, replace None with "YOUR_SENDER_ID"
+            response = sms.send(message, [phone], sender_id=None)
+            print(f"AFRICA'S TALKING RESPONSE: {response}")
             return True
         except Exception as e:
-            print(f"SMS failed: {e}")
+            print(f"AFRICA'S TALKING EXCEPTION: {e}")
 
-    print(f"SIMULATED SMS: {message}")
+    # Fallback print if SMS is not initialized or fails
+    print(f"SIMULATED SMS FALLBACK to {phone}: {message}")
     return True
 
 # ✅ FIXED + UPGRADED ANALYTICS (No Negative Times)
@@ -53,14 +72,12 @@ def get_queue_analytics():
     durations = []
     for t in completed:
         if t.called_at and t.completed_at:
-            # FIX: Prevent negative durations using max(0, calculation)
             diff = max(0, (t.completed_at - t.called_at).total_seconds() / 60)
             durations.append(diff)
     avg_service_time = sum(durations) / len(durations) if durations else 0
 
     # --- AVG WAIT TIME ---
     waiting = Ticket.objects.filter(status='waiting')
-    # FIX: Prevent negative wait times
     wait_times = [max(0, (timezone.now() - t.created_at).total_seconds() / 60) for t in waiting]
     avg_wait = sum(wait_times) / len(wait_times) if wait_times else 0
 

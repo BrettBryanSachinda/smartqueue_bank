@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
+import re
 from django.urls import reverse
 from django.contrib.auth import logout as django_logout
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -8,7 +9,10 @@ from django.views.decorators.cache import never_cache
 from django.http import HttpResponse
 from django.db import transaction # Critical for Bank-Grade Concurrency
 from django.db.models import Q # UPGRADE: Required for advanced line position math
+from django.contrib.auth.models import User
+from django.contrib.sessions.models import Session # Added to check active logins
 
+# RESTORED: Form needed for Manager to create tellers
 from .forms import TellerSignUpForm 
 from .models import Ticket, Teller, Service
 from .services import send_sms_notification, get_queue_analytics
@@ -18,6 +22,34 @@ import random
 import qrcode
 import io
 import base64
+
+# --- SESSION HELPER ---
+def get_active_user_ids():
+    """Returns a list of user IDs that are currently logged in with valid sessions."""
+    active_sessions = Session.objects.filter(expire_date__gte=timezone.now())
+    user_id_list = []
+    for session in active_sessions:
+        data = session.get_decoded()
+        user_id = data.get('_auth_user_id', None)
+        if user_id:
+            user_id_list.append(int(user_id))
+    return user_id_list
+
+# --- QUEUE POSITION HELPER ---
+def calculate_estimated_wait_time(ticket):
+    """Calculates the estimated wait time for a given ticket."""
+    stats = get_queue_analytics()
+    avg_service = stats.get('avg_service_time', 0)
+    if avg_service == 0:
+        avg_service = 5  
+        
+    position = Ticket.objects.filter(
+        Q(status__in=['waiting', 'delayed']) & 
+        Q(service=ticket.service) &
+        (Q(priority__lt=ticket.priority) | Q(priority=ticket.priority, created_at__lt=ticket.created_at))
+    ).count() + 1
+    
+    return max(0, int(position * avg_service))
 
 # --- ACCESS CONTROL HELPERS ---
 def is_manager(user):
@@ -42,7 +74,7 @@ def check_in_customer(request):
         service = get_object_or_404(Service, id=service_id)
         
         # --- ZIMBABWEAN NUMBER AUTO-FORMAT LOGIC ---
-        clean_phone = raw_phone.strip().replace(" ", "").replace("-", "")
+        clean_phone = re.sub(r'\D', '', raw_phone)
         
         if country_code == "+263" and clean_phone.startswith("0"):
             clean_phone = clean_phone[1:]
@@ -102,22 +134,15 @@ def ticket_success(request, ticket_id):
 
 def track_ticket(request, ticket_id):
     ticket = get_object_or_404(Ticket, id=ticket_id)
-    stats = get_queue_analytics()
-    
-    # FIX: Grab the value, and if it's 0 (no data today), force it to 5
-    avg_service = stats.get('avg_service_time', 0)
-    if avg_service == 0:
-        avg_service = 5  
         
     if ticket.status in ['waiting', 'delayed']:
-        # UPGRADE: Exact mathematical queue position factoring in Priority Jumps and Specific Service Lines
+        est_time = calculate_estimated_wait_time(ticket)
+        # Re-calculate position since we abstracted est_time
         position = Ticket.objects.filter(
             Q(status__in=['waiting', 'delayed']) & 
             Q(service=ticket.service) &
             (Q(priority__lt=ticket.priority) | Q(priority=ticket.priority, created_at__lt=ticket.created_at))
         ).count() + 1
-        
-        est_time = max(0, int(position * avg_service))
     else:
         position = 0
         est_time = 0
@@ -186,6 +211,11 @@ def teller_dashboard(request):
                     ticket.priority = 3 # FIX: Use integer 3 for Delayed
                     ticket.teller = None 
                     ticket.save()
+                    
+                    # NEW: Dispatch SMS for delayed ticket
+                    est_time = calculate_estimated_wait_time(ticket)
+                    delay_msg = f"SmartQueue: You missed your turn! Your ticket {ticket.ticket_number} has been delayed. Your new estimated wait time is {est_time} minutes."
+                    send_sms_notification(ticket, delay_msg)
         
         return redirect('teller_dashboard')
 
@@ -261,16 +291,26 @@ def manager_dashboard(request):
         # Redirect immediately after POST processing to prevent form resubmission
         return redirect('manager_dashboard')
 
-    # --- GET REQUEST LOGIC (Indentation fixed) ---
+    # --- GET REQUEST LOGIC ---
+    active_users = get_active_user_ids()
     teller_performance = []
+    
     for teller in Teller.objects.all():
         completed = Ticket.objects.filter(served_by=teller, completed_at__date=timezone.now().date())
         total_time = sum([max(0, (t.completed_at - t.called_at).total_seconds() / 60) for t in completed if t.called_at and t.completed_at])
         
+        # 1. Check if they have an active session (Logged In)
+        is_logged_in = teller.user.id in active_users
+        
+        # 2. Check if they are actively serving a ticket right now
+        is_serving = Ticket.objects.filter(status='serving', teller=teller).exists()
+        
         teller_performance.append({
             'teller': teller,
             'served': completed.count(),
-            'avg_time': round(total_time / completed.count(), 1) if completed.count() > 0 else 0
+            'avg_time': round(total_time / completed.count(), 1) if completed.count() > 0 else 0,
+            'is_logged_in': is_logged_in,
+            'is_serving': is_serving
         })
 
     analytics = get_queue_analytics()
@@ -281,7 +321,7 @@ def manager_dashboard(request):
         'serving_tickets': Ticket.objects.filter(status='serving'),
         'analytics': analytics,
         'service_stats': analytics.get('service_stats', []),
-        'teller_performance': teller_performance,  # FIX: Added this to the context so it renders in HTML!
+        'teller_performance': teller_performance,  
     }
     return render(request, 'manager_dashboard.html', context)
 
@@ -309,11 +349,16 @@ def export_tickets_csv(request):
         writer.writerow([t.ticket_number, t.customer_name, t.status, teller_name, duration])
     return response
 
+# --- SECURE TELLER CREATION (Managers Only) ---
+@user_passes_test(is_manager, login_url='login')
 def teller_signup(request):
     if request.method == 'POST':
         form = TellerSignUpForm(request.POST)
         if form.is_valid():
             form.save()
-            messages.success(request, "Account created! Please log in.")
-            return redirect('login')
-    return render(request, 'signup.html', {'form': TellerSignUpForm()})
+            messages.success(request, "New Teller account successfully created.")
+            return redirect('manager_dashboard') # Redirects Manager back to their dashboard
+    else:
+        form = TellerSignUpForm()
+        
+    return render(request, 'signup.html', {'form': form})

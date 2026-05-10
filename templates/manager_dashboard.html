@@ -64,41 +64,52 @@
 
         .panel {
             background: var(--navy2); padding: 25px; border-radius: 15px;
-            border: 1px solid var(--border); box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border: 1px solid var(--border); box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 25px;
         }
         .panel h3 { color: var(--gold); margin: 0 0 20px 0; font-size: 16px; border-bottom: 1px solid var(--border); padding-bottom: 15px; }
+        .panel-header-flex { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 15px; margin-bottom: 20px; }
+        .panel-header-flex h3 { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
 
         /* --- FORMS & INPUTS --- */
         label { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; margin-bottom: 8px; font-weight: 700; letter-spacing: 0.5px; }
         
-        select {
+        select, input[type="text"], input[type="password"] {
             width: 100%; padding: 12px 15px; background: rgba(0,0,0,0.2);
-            border: 1px solid var(--border); border-radius: 8px;
+            border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box;
             color: white; margin-bottom: 20px; font-family: inherit;
-            outline: none; transition: border-color 0.2s; cursor: pointer;
-            appearance: none;
+            outline: none; transition: border-color 0.2s;
         }
-        select:focus { border-color: var(--gold); }
+        select { cursor: pointer; appearance: none; }
+        select:focus, input:focus { border-color: var(--gold); }
         select option { background-color: var(--navy); color: white; }
 
         .btn-primary {
             background: linear-gradient(135deg, var(--gold), var(--gold2));
             color: var(--navy); border: none; padding: 14px; border-radius: 8px;
             font-weight: 700; font-family: inherit; width: 100%; cursor: pointer;
-            transition: opacity 0.2s, transform 0.1s; font-size: 14px;
+            transition: opacity 0.2s, transform 0.1s; font-size: 14px; text-decoration: none; display: inline-block; text-align: center; box-sizing: border-box;
         }
         .btn-primary:hover { opacity: 0.9; }
         .btn-primary:active { transform: scale(0.98); }
+
+        .btn-success { background: rgba(46, 204, 113, 0.1); color: var(--success); border: 1px solid rgba(46, 204, 113, 0.3); }
+        .btn-success:hover { background: var(--success); color: var(--navy); }
 
         .btn-warning { background: rgba(243, 156, 18, 0.1); color: var(--warning); border: 1px solid rgba(243, 156, 18, 0.3); }
         .btn-warning:hover { background: var(--warning); color: var(--navy); }
         
         .btn-danger { background: rgba(231, 76, 60, 0.1); color: var(--danger); border: 1px solid rgba(231, 76, 60, 0.3); margin-top: 10px; }
         .btn-danger:hover { background: var(--danger); color: white; }
+        
+        .btn-outline { background: transparent; color: var(--gold); border: 1px solid var(--gold); padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; text-decoration: none; transition: all 0.2s; }
+        .btn-outline:hover { background: rgba(201,168,76,0.1); }
 
         /* --- ALERTS --- */
-        .alert { padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: 500; font-size: 14px; }
+        .messages-container { margin-bottom: 20px; }
+        .alert { padding: 15px; border-radius: 8px; margin-bottom: 10px; font-weight: 500; font-size: 14px; }
         .alert-info { background: rgba(52,152,219,0.1); border: 1px solid rgba(52,152,219,0.3); color: #a8d5f5; }
+        .alert-success { background: rgba(46, 204, 113, 0.1); border: 1px solid rgba(46, 204, 113, 0.3); color: #2ecc71; }
+        .alert-error { background: rgba(231, 76, 60, 0.1); border: 1px solid rgba(231, 76, 60, 0.3); color: #e74c3c; }
         .alert.critical {
             background: rgba(231, 76, 60, 0.15); border: 1px solid var(--danger);
             color: #ff8e8e; animation: pulse 2s infinite; text-align: center; font-weight: 700;
@@ -111,7 +122,6 @@
         }
         
         /* --- CHART FIX --- */
-        /* Strict sizing prevents Chart.js from expanding infinitely */
         .chart-wrapper { width: 100%; max-width: 100%; margin: 0 auto; overflow: hidden; }
         .chart-container { position: relative; height: 220px; width: 100%; }
         .divider { margin: 20px 0; border: 0; border-top: 1px solid var(--border); }
@@ -145,7 +155,9 @@
 {% if messages %}
     <div class="messages-container">
         {% for message in messages %}
-            <div class="alert alert-info">{{ message }}</div>
+            <div class="alert {% if message.tags == 'error' %}alert-error{% elif message.tags == 'success' %}alert-success{% else %}alert-info{% endif %}">
+                {{ message }}
+            </div>
         {% endfor %}
     </div>
 {% endif %}
@@ -178,14 +190,14 @@
                 <input type="hidden" name="action" value="reassign">
                 
                 <label>Select Ticket</label>
-<select name="ticket_id" required>
-    <option value="" disabled selected>-- Select a ticket --</option>
-    {% for ticket in waiting_tickets %}
-        <option value="{{ ticket.id }}">
-            {{ ticket.ticket_number }} ({{ ticket.customer_name }}) - [{{ ticket.get_priority_display }}]
-        </option>
-    {% endfor %}
-</select>
+                <select name="ticket_id" required>
+                    <option value="" disabled selected>-- Select a ticket --</option>
+                    {% for ticket in waiting_tickets %}
+                        <option value="{{ ticket.id }}">
+                            {{ ticket.ticket_number }} ({{ ticket.customer_name }}) - [{{ ticket.get_priority_display }}]
+                        </option>
+                    {% endfor %}
+                </select>
 
                 <label>Target Teller</label>
                 <select name="teller_id" required>
@@ -212,15 +224,16 @@
                         </option>
                     {% endfor %}
                 </select>
-<label>Change Priority</label>
-<select name="priority">
-    <option value="1">High</option>
-    <option value="2">Normal</option>
-    <option value="3">Delayed</option>
-</select>
-<button name="action" value="priority" class="btn-primary">Update Priority</button>
+
+                <label>Change Priority</label>
+                <select name="priority">
+                    <option value="1">High</option>
+                    <option value="2">Normal</option>
+                    <option value="3">Delayed</option>
+                </select>
+                <button name="action" value="priority" class="btn-primary">Update Priority</button>
                 
-<hr class="divider">
+                <hr class="divider">
 
                 <label>Move to Service Queue</label>
                 <select name="service_id">
@@ -238,6 +251,7 @@
                 </div>
             </form>
         </div>
+
     </div>
 
     <div class="right-col">
@@ -262,7 +276,11 @@
 </div>
 
 <div class="panel" style="margin-bottom: 40px;">
-    <h3>Full Teller Audit</h3>
+    <div class="panel-header-flex">
+        <h3>Full Teller Audit</h3>
+        <a href="{% url 'signup' %}" class="btn-outline">+ Register New Teller</a>
+    </div>
+    
     <div class="table-responsive">
         <table class="audit-table">
             <thead>
@@ -280,10 +298,12 @@
                     <td><strong style="color: var(--gold);">{{ data.teller.counter_number }}</strong></td>
                     <td>{{ data.teller.user.first_name }} {{ data.teller.user.last_name }} ({{ data.teller.user.username }})</td>
                     <td>
-                        {% if data.teller.is_available %}
-                            <span class="badge badge-idle">● Idle / Ready</span>
-                        {% else %}
+                        {% if not data.is_logged_in %}
+                            <span class="badge badge-offline">● Offline</span>
+                        {% elif data.is_serving %}
                             <span class="badge badge-serving">● Busy Serving</span>
+                        {% else %}
+                            <span class="badge badge-idle">● Idle / Ready</span>
                         {% endif %}
                     </td>
                     <td>{{ data.served }} customers</td>

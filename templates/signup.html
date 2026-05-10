@@ -2,43 +2,147 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Teller Registration | SmartQueue</title>
+    <title>Register Teller | SmartQueue Command Center</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f7f6; display: flex; justify-content: center; padding-top: 50px; }
-        .signup-container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
-        .signup-container h2 { text-align: center; color: #333; }
-        
-        .form-group { margin-bottom: 15px; position: relative; }
-        .form-group label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; }
-        .form-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        
-        /* The eye icon styling */
-        .toggle-password {
-            position: absolute;
-            right: 10px;
-            top: 32px;
-            cursor: pointer;
-            color: #666;
-            font-size: 18px;
-            user-select: none; /* Prevents highlighting the icon */
+        :root {
+            --navy: #0B1A2E; 
+            --navy2: #112240; 
+            --gold: #C9A84C;
+            --gold2: #E8C97A; 
+            --white: #FFFFFF; 
+            --muted: #8B96A8;
+            --danger: #E74C3C; 
+            --border: rgba(201,168,76,0.2);
         }
 
-        .btn-submit { width: 100%; padding: 10px; background-color: #0056b3; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; margin-top: 10px; }
-        .btn-submit:hover { background-color: #004494; }
-        .errorlist { color: red; font-size: 12px; list-style-type: none; padding: 0; margin-top: 5px; }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background-color: var(--navy);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            color: var(--white);
+        }
+
+        .signup-card {
+            background: var(--navy2);
+            width: 100%;
+            max-width: 450px;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            border: 1px solid var(--border);
+        }
+        
+        .header-text {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo { font-family: 'Playfair Display', serif; font-size: 28px; margin-bottom: 5px; }
+        .logo span { color: var(--gold); }
+        .subtitle { color: var(--muted); font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+
+        .form-group { margin-bottom: 20px; position: relative; }
+        .form-group label { 
+            display: block; 
+            color: var(--muted); 
+            font-size: 11px; 
+            text-transform: uppercase; 
+            margin-bottom: 8px; 
+            font-weight: 700; 
+            letter-spacing: 0.5px; 
+        }
+        
+        .form-group input { 
+            width: 100%; 
+            padding: 12px 15px; 
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.08); 
+            border-radius: 8px; 
+            box-sizing: border-box;
+            color: var(--white); 
+            font-family: inherit;
+            font-size: 14px;
+            outline: none; 
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus { border-color: var(--gold); }
+
+        /* Eye icon styling */
+        .toggle-password {
+            position: absolute;
+            right: 15px;
+            top: 36px;
+            cursor: pointer;
+            color: var(--muted);
+            font-size: 16px;
+            user-select: none;
+            transition: color 0.2s;
+        }
+        .toggle-password:hover { color: var(--gold); }
+
+        .btn-submit {
+            background: linear-gradient(135deg, var(--gold), var(--gold2));
+            color: var(--navy); border: none; padding: 14px; border-radius: 8px;
+            font-weight: 700; font-family: inherit; width: 100%; cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s; font-size: 15px; margin-top: 10px;
+        }
+        .btn-submit:hover { opacity: 0.9; }
+        .btn-submit:active { transform: scale(0.98); }
+
+        .btn-back {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        .btn-back:hover { color: var(--gold); }
+
+        .errorlist { 
+            color: var(--danger); 
+            font-size: 12px; 
+            list-style-type: none; 
+            padding: 0; 
+            margin-top: 5px; 
+            font-weight: 500;
+        }
+        
+        /* Styles general form errors */
+        .non-field-errors {
+            background: rgba(231, 76, 60, 0.1); border: 1px solid rgba(231, 76, 60, 0.3);
+            color: #ff8e8e; padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
 
-<div class="signup-container">
-    <h2>Register as Teller</h2>
+<div class="signup-card">
+    <div class="header-text">
+        <div class="logo">Smart<span>Queue</span></div>
+        <div class="subtitle">Staff Registration</div>
+    </div>
 
-    <form method="POST">
+    <form method="POST" autocomplete="off">
         {% csrf_token %}
         
+        {% if form.non_field_errors %}
+            <div class="non-field-errors">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
         {% for field in form %}
             <div class="form-group">
                 {{ field.label_tag }}
@@ -51,19 +155,17 @@
                 {% if field.errors %}
                     <ul class="errorlist">
                         {% for error in field.errors %}
-                            <li>{{ error }}</li>
+                            <li>⚠ {{ error }}</li>
                         {% endfor %}
                     </ul>
                 {% endif %}
             </div>
         {% endfor %}
 
-        <button type="submit" class="btn-submit">Create Account</button>
+        <button type="submit" class="btn-submit">Register New Teller</button>
     </form>
     
-    <p style="text-align: center; margin-top: 15px; font-size: 14px;">
-        Already have an account? <a href="{% url 'login' %}">Log in here</a>.
-    </p>
+    <a href="{% url 'manager_dashboard' %}" class="btn-back">← Back to Command Center</a>
 </div>
 
 <script>
